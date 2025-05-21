@@ -4,97 +4,126 @@ from rclpy.node import Node
 from geometry_msgs.msg import Point
 from std_msgs.msg import Float64MultiArray
 import math
-import time
 
 
 class subscriber(Node):
     def __init__(self):
-         super().__init__('point_subscriber')
-         self.subsriber=self.create_subscription(Point,'mytopic',self.logic,20)
-         self.publisher = self.create_publisher(Float64MultiArray, '/arm_angles', 10)
-         time.sleep(10.0)
+        super().__init__('point_subscriber')
+        self.subscriber = self.create_subscription(Point, 'mytopic', self.logic, 20)
+        self.publisher = self.create_publisher(Float64MultiArray, '/arm_angles', 10)
 
-    def logic(self,msg:Point):
-         x=msg.x
-         y=msg.y
-         z=msg.z
+    def inverse_kinematics_5dof(self, x, y, z, pitch, roll):
+        """
+        Compute inverse kinematics for a 5-DOF robotic arm.
+        
+        With only 5 DOF, the arm cannot reach arbitrary position and orientation.
+        This implementation prioritizes position and approximates orientation.
+        
+        Args:
+            x, y, z: Target end effector position (meters)
+            pitch: Desired pitch angle (radians)
+            roll: Desired roll angle (radians)
+        
+        Returns:
+            Tuple of 5 joint angles (radians)
+        """
+        # Corrected link lengths based on model.sdf
+        L1 = 1.0    # Base to shoulder (Z offset)
+        L2 = 0.43   # Upper arm length
+        L3 = 0.4    # Elbow link length
+        L4 = 0.036  # Forearm length
+        L5 = 0.035  # End effector offset
+        
+        # Joint 1: Base rotation
+        theta1 = math.atan2(y, x)
+        
+        # Calculate position in plane after base rotation
+        r = math.sqrt(x**2 + y**2)  # Distance in XY plane
+        z_shoulder = z - L1  # Height relative to shoulder
+        
+        # Account for wrist and end effector length in target calculation
+        # This is a simplification - assumes end effector pointing outward
+        wrist_r = r
+        wrist_z = z_shoulder
+        
+        # Distance from shoulder to wrist
+        D = math.sqrt(wrist_r**2 + wrist_z**2)
+        
+        # Check if target is reachable
+        max_reach = L2 + L3 + L4 + L5
+        if D > max_reach:
+            raise ValueError(f"Target out of reach. Distance to target ({D:.2f}m) exceeds arm length ({max_reach:.2f}m)")
+        
+        # Joint 3: Elbow angle
+        cos_theta3 = (D**2 - L2**2 - L3**2) / (2 * L2 * L3)
+        cos_theta3 = max(min(cos_theta3, 1.0), -1.0)  # Clamp to valid range
+        theta3 = -math.acos(cos_theta3)  # Negative for more natural pose
+        
+        # Joint 2: Shoulder angle
+        beta = math.atan2(wrist_z, wrist_r)  # Angle to target
+        cos_alpha = (L2**2 + D**2 - L3**2) / (2 * L2 * D)
+        cos_alpha = max(min(cos_alpha, 1.0), -1.0)  # Clamp to valid range
+        alpha = math.acos(cos_alpha)  # Angle within arm triangle
+        theta2 = beta + alpha
+        
+        # Joint 4: Wrist rotation (around Z axis)
+        # For 5-DOF, orientation control is limited
+        theta4 = roll
+        
+        # Joint 5: Wrist pitch
+        # Compensate for arm's orientation to approximate desired pitch
+        arm_pitch = theta2 + theta3  # Combined pitch from shoulder and elbow
+        theta5 = pitch - arm_pitch
+        
+        # Check joint limits
+        angles = [theta1, theta2, theta3, theta4, theta5]
+        limits = [
+            (-3.14, 3.14),   # joint1
+            (-0.34, 1.57),   # joint2
+            (-1.74, 1.74),   # joint3
+            (-3.14, 3.14),   # joint4
+            (-1.27, 1.27)    # joint5
+        ]
+        
+        for i, (angle, (lower, upper)) in enumerate(zip(angles, limits)):
+            if angle < lower:
+                self.get_logger().warning(f"Joint {i+1} angle {angle:.2f} below limit, clamping to {lower:.2f}")
+                angles[i] = lower
+            elif angle > upper:
+                self.get_logger().warning(f"Joint {i+1} angle {angle:.2f} above limit, clamping to {upper:.2f}")
+                angles[i] = upper
+        
+        return tuple(angles)
 
-         # Link lengths (example values in meters)
-         L1 = 0.5  # Base to shoulder
-         L2 = 0.3  # Shoulder to elbow
-         L3 = 0.2  # Elbow to wrist
+    def logic(self, msg: Point):
+        x = msg.x
+        y = msg.y
+        z = msg.z
 
-         def inverse_kinematics_5dof(x, y, z, pitch, roll):
-            """
-            Compute inverse kinematics for a simplified 5-DOF robotic arm.
-            Inputs:
-                x, y, z   - desired end effector position
-                pitch     - desired pitch angle (rad)
-                roll      - desired roll angle (rad)
-            Returns:
-                A tuple of 5 joint angles (theta1 to theta5)
-            """
+        # Default orientation (you can later receive from a topic)
+        pitch = math.radians(30)
+        roll = math.radians(15)
 
-            # θ1 - base rotation angle
-            theta1 = math.atan2(y, x)
+        try:
+            angles = list(self.inverse_kinematics_5dof(x, y, z, pitch, roll))
+            self.get_logger().info("Joint angles (radians): " + str(angles))
 
-            # Planar distance to wrist position
-            r = math.sqrt(x**2 + y**2)
-            z_wrist = z - L1  # subtract base height
+            msg_out = Float64MultiArray()
+            msg_out.data = angles
+            self.publisher.publish(msg_out)
+            self.get_logger().info(f'Published angles: {msg_out.data}')
 
-            # Distance from shoulder to wrist
-            D = math.sqrt(r**2 + z_wrist**2)
-
-            # Law of Cosines for elbow angle (θ3)
-            cos_theta3 = (D**2 - L2**2 - L3**2) / (2 * L2 * L3)
-            if abs(cos_theta3) > 1.0:
-                raise ValueError("Target is out of reach.")
-            theta3 = math.acos(cos_theta3)
-
-            # Angle from shoulder to wrist
-            theta2_offset = math.atan2(z_wrist, r)
-            theta2_inner = math.acos((L2**2 + D**2 - L3**2) / (2 * L2 * D))
-            theta2 = theta2_offset + theta2_inner
-
-            # θ4 and θ5 are wrist pitch and roll
-            theta4 = pitch
-            theta5 = roll
-
-            return theta1, theta2, theta3, theta4, theta5
-
-        # Example usage
-        #if __name__ == "__main__":
-        # Target position and orientation
-         target_x = x
-         target_y = y
-         target_z = z
-         pitch = math.radians(30)
-         roll = math.radians(15)
-
-         try:
-            angles = list(inverse_kinematics_5dof(target_x, target_y, target_z, pitch, roll))
-            self.get_logger().info("Joint angles (radians):"+str(angles))
-            #self.get_logger().info("Joint angles (degrees):", tuple(math.degrees(a) for a in angles))
+        except ValueError as e:
+            self.get_logger().error(f"IK Error: {e}")
 
 
-            # joint_state = JointState()
-            # joint_state.header.stamp = self.get_clock().now().to_msg()
-            # joint_state.name = ['joint1', 'joint2', 'joint3', 'joint4', 'joint5']  # match your URDF joints
-            # joint_state.position = list(angles)
-
-            # self.publisher.publish(joint_state)
-            msg = Float64MultiArray()
-            msg.data = angles
-            self.publisher.publish(msg)
-            self.get_logger().info(f'Published angles: {msg.data}')
-
-         except ValueError as e:
-            print("Error:", e)
 def main(args=None):
     rclpy.init(args=args)
     node = subscriber()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
-
-        
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info('Node interrupted.')
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
