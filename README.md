@@ -4,7 +4,7 @@ This repository contains the arm_ik_solver package which calculates the angles n
 
 ---
 
-## 📁 Repository Setup
+## Repository Setup
 
 ### 1. Clone the Simulation Repository (with submodules)
 
@@ -50,7 +50,7 @@ sudo docker build -t arm_simulation .
 
 ---
 
-## 🚀 Run the Simulation
+## Run the Simulation
 
 ### 1. Start the Docker Container
 
@@ -73,7 +73,7 @@ This happens automatically with `run.sh`, but if needed manually, run:
 
 ---
 
-## ▶️ Execution
+## Execution
 
 ### Launch the Simulation
 
@@ -100,7 +100,7 @@ Then:
 
 ---
 
-## ✅ Notes
+## Notes
 
 - Make sure you have Docker installed and accessible to run these commands.
 - The ROS 2 environment inside the container is based on Humble Hawksbill.
