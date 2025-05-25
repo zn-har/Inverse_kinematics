@@ -1,4 +1,4 @@
-# Inverse_kinematics
+# Inverse Kinematics
 
 This repository contains the arm_ik_solver package which calculates the angles necessary to reach a given point in 3D space in the given simulation.
 
