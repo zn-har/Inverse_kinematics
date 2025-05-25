@@ -41,7 +41,7 @@ cp -r arm_ik_solver /path/to/RoboticArmSim_Dockerized/workspace/src/
 
 ---
 
-## 🛠️ Build the Docker Image
+## Build the Docker Image
 
 ```bash
 cd /path/to/RoboticArmSim_Dockerized
