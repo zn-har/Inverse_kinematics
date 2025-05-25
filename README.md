@@ -105,3 +105,7 @@ Then:
 - Make sure you have Docker installed and accessible to run these commands.
 - The ROS 2 environment inside the container is based on Humble Hawksbill.
 - This setup allows for modular development and testing of simulation and control logic in isolated Docker environments.
+
+
+## Screenshot
+![Example Image](example.png)
