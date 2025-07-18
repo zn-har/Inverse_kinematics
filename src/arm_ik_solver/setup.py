@@ -10,6 +10,8 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+	('share/' + package_name + '/urdf', ['urdf/five_dof_arm.urdf']),
+
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -22,6 +24,7 @@ setup(
         'console_scripts': [
             "kinematics=arm_ik_solver.arm_ik_solver_kinematics:main",
             "angles=arm_ik_solver.arm_ik_solver_angle:main",
+            "target = arm_ik_solver.target_publisher:main"
         ],
     },
 )
