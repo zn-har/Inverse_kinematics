@@ -23,7 +23,7 @@ class Mynode(Node):
         point = Point()
         point.x = x
         point.y = y
-        point.z = z
+        point.z = z+1
 
         self.publisher.publish(point)
 
