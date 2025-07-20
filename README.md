@@ -108,4 +108,4 @@ Then:
 
 
 ## Screenshot
-![Example Image](example.png)
+![Example Image](example1.png)
