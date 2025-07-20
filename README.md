@@ -90,7 +90,7 @@ ros2 run arm_ik_solver kinematics
 
 **In Terminal 2:**
 ```bash
-ros2 run arm_ik_solver angles
+ros2 run arm_ik_solver target
 ```
 
 Then:
