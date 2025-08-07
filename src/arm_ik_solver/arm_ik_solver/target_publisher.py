@@ -6,8 +6,8 @@ import math
 
 
 class Mynode(Node):
-    def __init__(self):
-        super().__init__("kinematics")
+    def _init_(self):
+        super()._init_("kinematics")
         #self.get_logger().info("hellloooo")
         self.publisher=self.create_publisher(Pose,'targets',20)
         self.a=0
@@ -61,5 +61,5 @@ def main(args=None):
     rclpy.spin(node)
     rclpy.shutdown()
 
-if __name__=='__main__':
-    main()
+if _name=='main_':
+    main()
