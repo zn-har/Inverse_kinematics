@@ -11,8 +11,8 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 class IKSolverNode(Node):
-    def __init__(self):
-        super().__init__('ik_solver_node')
+    def _init_(self):
+        super()._init_('ik_solver_node')
 
         # Load URDF
         urdf_path = os.path.join(
@@ -150,5 +150,5 @@ def main(args=None):
         node.destroy_node()
         rclpy.shutdown()
 
-if __name__ == '__main__':
-    main()
+if _name_ == '_main_':
+    main()
